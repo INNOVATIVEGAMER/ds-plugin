@@ -8,6 +8,21 @@ interface CollectionInfo {
   variableCount: number;
 }
 
+interface TextStyleInfo {
+  id: string;
+  name: string;
+  fontFamily: string;
+  fontWeight: number;
+  fontSize: number;
+}
+
+interface EffectStyleInfo {
+  id: string;
+  name: string;
+  effectCount: number;
+  effectTypes: string[];
+}
+
 interface TokenFile {
   filename: string;
   collectionName: string;
@@ -22,6 +37,12 @@ export default function App() {
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [selectedModes, setSelectedModes] = useState<Record<string, string[]>>({});
 
+  // Styles state
+  const [textStyles, setTextStyles] = useState<TextStyleInfo[]>([]);
+  const [effectStyles, setEffectStyles] = useState<EffectStyleInfo[]>([]);
+  const [selectedTextStyles, setSelectedTextStyles] = useState<string[]>([]);
+  const [selectedEffectStyles, setSelectedEffectStyles] = useState<string[]>([]);
+
   const [options, setOptions] = useState({
     includeDescriptions: true,
     defaultUnit: 'px' as 'px' | 'rem',
@@ -35,7 +56,9 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Fetch both collections and styles on load
     parent.postMessage({ pluginMessage: { type: 'GET_COLLECTIONS' } }, '*');
+    parent.postMessage({ pluginMessage: { type: 'GET_STYLES' } }, '*');
 
     const handleMessage = (event: MessageEvent) => {
       const msg = event.data.pluginMessage;
@@ -50,6 +73,14 @@ export default function App() {
             allModes[c.id] = c.modes.map((m) => m.modeId);
           });
           setSelectedModes(allModes);
+          break;
+
+        case 'STYLES_DATA':
+          setTextStyles(msg.payload.textStyles);
+          setEffectStyles(msg.payload.effectStyles);
+          // Select all styles by default
+          setSelectedTextStyles(msg.payload.textStyles.map((s: TextStyleInfo) => s.id));
+          setSelectedEffectStyles(msg.payload.effectStyles.map((s: EffectStyleInfo) => s.id));
           break;
 
         case 'EXPORT_RESULT':
@@ -100,6 +131,35 @@ export default function App() {
     setSelectedModes({});
   };
 
+  // Style toggle functions
+  const toggleTextStyle = (id: string) => {
+    setSelectedTextStyles((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  };
+
+  const toggleEffectStyle = (id: string) => {
+    setSelectedEffectStyles((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllTextStyles = () => {
+    setSelectedTextStyles(textStyles.map((s) => s.id));
+  };
+
+  const deselectAllTextStyles = () => {
+    setSelectedTextStyles([]);
+  };
+
+  const selectAllEffectStyles = () => {
+    setSelectedEffectStyles(effectStyles.map((s) => s.id));
+  };
+
+  const deselectAllEffectStyles = () => {
+    setSelectedEffectStyles([]);
+  };
+
   const handleExport = () => {
     setIsLoading(true);
     setError('');
@@ -116,6 +176,10 @@ export default function App() {
             defaultUnit: options.defaultUnit,
             colorFormat: options.colorFormat,
             resolveReferences: options.resolveReferences,
+            exportTextStyles: selectedTextStyles.length > 0,
+            exportEffectStyles: selectedEffectStyles.length > 0,
+            selectedTextStyles,
+            selectedEffectStyles,
           },
         },
       },
@@ -155,6 +219,9 @@ export default function App() {
   const totalVariables = collections
     .filter((c) => selectedCollections.includes(c.id))
     .reduce((sum, c) => sum + c.variableCount, 0);
+
+  const totalTokens = totalVariables + selectedTextStyles.length + selectedEffectStyles.length;
+  const hasSelection = selectedCollections.length > 0 || selectedTextStyles.length > 0 || selectedEffectStyles.length > 0;
 
   return (
     <div className="app">
@@ -213,6 +280,82 @@ export default function App() {
         )}
       </section>
 
+      {/* Text Styles Section */}
+      <section className="section">
+        <div className="section-header">
+          <h2>Text Styles</h2>
+          {textStyles.length > 0 && (
+            <div className="section-actions">
+              <button className="link-btn" onClick={selectAllTextStyles}>
+                Select all
+              </button>
+              <span className="divider">|</span>
+              <button className="link-btn" onClick={deselectAllTextStyles}>
+                Deselect all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {textStyles.length === 0 ? (
+          <p className="empty">No text styles found in this file.</p>
+        ) : (
+          <div className="styles-list">
+            {textStyles.map((s) => (
+              <label key={s.id} className="style-item">
+                <input
+                  type="checkbox"
+                  checked={selectedTextStyles.includes(s.id)}
+                  onChange={() => toggleTextStyle(s.id)}
+                />
+                <span className="style-name">{s.name}</span>
+                <span className="style-meta">
+                  {s.fontFamily} · {s.fontWeight} · {s.fontSize}px
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Effect Styles Section */}
+      <section className="section">
+        <div className="section-header">
+          <h2>Effect Styles</h2>
+          {effectStyles.length > 0 && (
+            <div className="section-actions">
+              <button className="link-btn" onClick={selectAllEffectStyles}>
+                Select all
+              </button>
+              <span className="divider">|</span>
+              <button className="link-btn" onClick={deselectAllEffectStyles}>
+                Deselect all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {effectStyles.length === 0 ? (
+          <p className="empty">No effect styles found in this file.</p>
+        ) : (
+          <div className="styles-list">
+            {effectStyles.map((s) => (
+              <label key={s.id} className="style-item">
+                <input
+                  type="checkbox"
+                  checked={selectedEffectStyles.includes(s.id)}
+                  onChange={() => toggleEffectStyle(s.id)}
+                />
+                <span className="style-name">{s.name}</span>
+                <span className="style-meta">
+                  {s.effectCount} {s.effectCount === 1 ? 'effect' : 'effects'} · {s.effectTypes.join(', ')}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="section">
         <h2>Options</h2>
         <div className="options-grid">
@@ -261,9 +404,9 @@ export default function App() {
       <button
         className="primary-btn"
         onClick={handleExport}
-        disabled={isLoading || selectedCollections.length === 0}
+        disabled={isLoading || !hasSelection}
       >
-        {isLoading ? 'Generating...' : `Generate ${totalVariables} tokens`}
+        {isLoading ? 'Generating...' : `Generate ${totalTokens} tokens`}
       </button>
 
       {error && <p className="error">{error}</p>}

@@ -11,6 +11,8 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: false,
     sourcemap: false,
+    target: 'es2017',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         extend: true,

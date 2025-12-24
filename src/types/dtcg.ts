@@ -18,7 +18,33 @@ export type DTCGColorValue = DTCGHexColor | DTCGOklchColor;
 // Dimension value
 export interface DTCGDimensionValue {
   value: number;
-  unit: 'px' | 'rem';
+  unit: 'px' | 'rem' | 'em';
+}
+
+// ============================================
+// Composite Token Types (DTCG Spec)
+// ============================================
+
+// Typography composite token
+export interface DTCGTypographyValue {
+  fontFamily: string;
+  fontSize: DTCGDimensionValue;
+  fontWeight: number;
+  lineHeight: number | string; // number for ratio, string for 'auto'
+  letterSpacing?: DTCGDimensionValue;
+  paragraphSpacing?: DTCGDimensionValue;
+  textCase?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textDecoration?: 'none' | 'underline' | 'line-through';
+}
+
+// Single shadow value
+export interface DTCGShadowValue {
+  color: DTCGColorValue;
+  offsetX: DTCGDimensionValue;
+  offsetY: DTCGDimensionValue;
+  blur: DTCGDimensionValue;
+  spread: DTCGDimensionValue;
+  inset?: boolean;
 }
 
 // Reference to another token
@@ -28,14 +54,17 @@ export type DTCGReference = `{${string}}`;
 export type DTCGTokenValue =
   | DTCGColorValue
   | DTCGDimensionValue
-  | string          // fontFamily
-  | number          // number, fontWeight
+  | DTCGTypographyValue
+  | DTCGShadowValue
+  | DTCGShadowValue[]  // Multiple shadows
+  | string             // fontFamily
+  | number             // number, fontWeight
   | DTCGReference;
 
 // Token structure
 export interface DTCGToken {
   $value: DTCGTokenValue;
-  $type?: 'color' | 'dimension' | 'number' | 'fontFamily' | 'fontWeight';
+  $type?: 'color' | 'dimension' | 'number' | 'fontFamily' | 'fontWeight' | 'typography' | 'shadow';
   $description?: string;
   $extensions?: Record<string, unknown>;
 }
@@ -58,6 +87,11 @@ export interface ExportConfig {
   defaultUnit: 'px' | 'rem';
   colorFormat: ColorFormat;        // 'hex' (default) or 'oklch'
   resolveReferences: boolean;      // true = flatten aliases to actual values
+  // Style export options
+  exportTextStyles: boolean;
+  exportEffectStyles: boolean;
+  selectedTextStyles: string[];    // Text style IDs to export
+  selectedEffectStyles: string[];  // Effect style IDs to export
 }
 
 // Output file structure
@@ -66,4 +100,23 @@ export interface TokenFile {
   collectionName: string;
   modeName: string;
   content: DTCGTokenTree;
+}
+
+// ============================================
+// Style Info Types (for UI display)
+// ============================================
+
+export interface TextStyleInfo {
+  id: string;
+  name: string;
+  fontFamily: string;
+  fontWeight: number;
+  fontSize: number;
+}
+
+export interface EffectStyleInfo {
+  id: string;
+  name: string;
+  effectCount: number;
+  effectTypes: string[];  // e.g., ['DROP_SHADOW', 'INNER_SHADOW']
 }

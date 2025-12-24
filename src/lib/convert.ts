@@ -11,12 +11,17 @@ import type {
   ExportConfig,
   DTCGReference,
   TokenFile,
+  DTCGTypographyValue,
+  DTCGShadowValue,
 } from '../types/dtcg';
 import type {
   ExtractedCollection,
   ExtractedVariable,
   VariableValue,
   RGBA,
+  ExtractedTextStyle,
+  ExtractedEffectStyle,
+  BoundValue,
 } from './extract';
 
 /**
@@ -438,4 +443,146 @@ function inferType(variable: ExtractedVariable): DTCGToken['$type'] {
     default:
       return undefined;
   }
+}
+
+// ============================================
+// Style to DTCG Conversion
+// ============================================
+
+/**
+ * Convert variable name to DTCG reference
+ * "weight/semibold" → "{weight.semibold}"
+ */
+function variableNameToReference(variableName: string): DTCGReference {
+  const path = variableName.replace(/\//g, '.');
+  return `{${path}}` as DTCGReference;
+}
+
+/**
+ * Convert BoundValue to DTCG value (reference or raw value)
+ */
+function convertBoundValue<T>(
+  boundValue: BoundValue<T>,
+  rawValueConverter: (value: T) => DTCGReference | DTCGDimensionValue | DTCGColorValue | string | number
+): DTCGReference | DTCGDimensionValue | DTCGColorValue | string | number {
+  if (boundValue.type === 'reference') {
+    return variableNameToReference(boundValue.variableName);
+  }
+  return rawValueConverter(boundValue.value);
+}
+
+/**
+ * Convert extracted text styles to DTCG token tree
+ */
+export function convertTextStylesToDTCG(
+  textStyles: ExtractedTextStyle[],
+  config: ExportConfig
+): DTCGTokenTree {
+  const tree: DTCGTokenTree = {};
+
+  for (const style of textStyles) {
+    // Split path: "Heading/Large" → ["Heading", "Large"]
+    const pathParts = style.name.split('/');
+    const tokenName = pathParts.pop()!;
+
+    // Navigate/create nested groups
+    let current: DTCGTokenTree = tree;
+    for (const part of pathParts) {
+      if (!current[part] || typeof current[part] !== 'object' || '$value' in (current[part] as object)) {
+        current[part] = {};
+      }
+      current = current[part] as DTCGTokenTree;
+    }
+
+    // Build typography value with references or raw values
+    const typographyValue: Record<string, unknown> = {
+      fontFamily: convertBoundValue(style.fontFamily, (v) => v),
+      fontSize: convertBoundValue(style.fontSize, (v) => ({ value: v, unit: config.defaultUnit })),
+      fontWeight: convertBoundValue(style.fontWeight, (v) => v),
+      lineHeight: convertBoundValue(style.lineHeight, (v) =>
+        v === 'AUTO' ? 'auto' : (typeof v === 'number' ? v : v)
+      ),
+    };
+
+    // Add letterSpacing if present
+    const letterSpacingValue = convertBoundValue(style.letterSpacing, (v) =>
+      v !== 0 ? { value: v, unit: config.defaultUnit } : { value: 0, unit: config.defaultUnit }
+    );
+    if (letterSpacingValue !== undefined) {
+      typographyValue.letterSpacing = letterSpacingValue;
+    }
+
+    // Create the token
+    const token: DTCGToken = {
+      $type: 'typography',
+      $value: typographyValue as unknown as DTCGTypographyValue,
+    };
+
+    // Add description if enabled
+    if (config.includeDescriptions && style.description) {
+      token.$description = style.description;
+    }
+
+    current[tokenName] = token;
+  }
+
+  return tree;
+}
+
+/**
+ * Convert extracted effect styles to DTCG token tree
+ */
+export function convertEffectStylesToDTCG(
+  effectStyles: ExtractedEffectStyle[],
+  config: ExportConfig
+): DTCGTokenTree {
+  const tree: DTCGTokenTree = {};
+
+  for (const style of effectStyles) {
+    // Split path: "Shadow/Large" → ["Shadow", "Large"]
+    const pathParts = style.name.split('/');
+    const tokenName = pathParts.pop()!;
+
+    // Navigate/create nested groups
+    let current: DTCGTokenTree = tree;
+    for (const part of pathParts) {
+      if (!current[part] || typeof current[part] !== 'object' || '$value' in (current[part] as object)) {
+        current[part] = {};
+      }
+      current = current[part] as DTCGTokenTree;
+    }
+
+    // Convert each shadow effect
+    const shadowValues: DTCGShadowValue[] = style.effects.map((effect) => {
+      const shadow: Record<string, unknown> = {
+        offsetX: convertBoundValue(effect.offsetX, (v) => ({ value: v, unit: config.defaultUnit })),
+        offsetY: convertBoundValue(effect.offsetY, (v) => ({ value: v, unit: config.defaultUnit })),
+        blur: convertBoundValue(effect.blur, (v) => ({ value: v, unit: config.defaultUnit })),
+        spread: convertBoundValue(effect.spread, (v) => ({ value: v, unit: config.defaultUnit })),
+        color: convertBoundValue(effect.color, (v) => convertColor(v, config.colorFormat)),
+      };
+
+      // Add inset for inner shadows
+      if (effect.type === 'INNER_SHADOW') {
+        shadow.inset = true;
+      }
+
+      return shadow as unknown as DTCGShadowValue;
+    });
+
+    // Create the token - single shadow or array
+    const token: DTCGToken = {
+      $type: 'shadow',
+      $value: shadowValues.length === 1 ? shadowValues[0] : shadowValues,
+    };
+
+    // Add description if enabled
+    if (config.includeDescriptions && style.description) {
+      token.$description = style.description;
+    }
+
+    current[tokenName] = token;
+  }
+
+  return tree;
 }

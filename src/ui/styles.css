@@ -134,6 +134,42 @@ body {
   color: #555;
 }
 
+/* Styles List (Text & Effect Styles) */
+.styles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.style-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f7f7f7;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.style-item:hover {
+  background: #efefef;
+}
+
+.style-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.style-meta {
+  color: #888;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .options-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

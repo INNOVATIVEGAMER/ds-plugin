@@ -65,8 +65,9 @@ export function convertToDTCG(
         variableMap
       );
 
-      // Generate filename: lowercase with dashes, e.g., "colors-light.json"
-      const filename = generateFilename(collection.name, mode.name);
+      // Generate filename: lowercase with dashes
+      // Skip mode suffix if collection has only one mode
+      const filename = generateFilename(collection.name, mode.name, collection.modes.length === 1);
 
       result.push({
         filename,
@@ -83,8 +84,9 @@ export function convertToDTCG(
 /**
  * Generate filename in lowercase with dashes
  * e.g., "My Colors" + "Light Mode" → "my-colors-light-mode.json"
+ * If singleMode is true, omits the mode name: "my-colors.json"
  */
-function generateFilename(collectionName: string, modeName: string): string {
+function generateFilename(collectionName: string, modeName: string, singleMode: boolean): string {
   const sanitize = (str: string): string => {
     return str
       .toLowerCase()
@@ -92,6 +94,9 @@ function generateFilename(collectionName: string, modeName: string): string {
       .replace(/^-+|-+$/g, '');    // Trim leading/trailing dashes
   };
 
+  if (singleMode) {
+    return `${sanitize(collectionName)}.json`;
+  }
   return `${sanitize(collectionName)}-${sanitize(modeName)}.json`;
 }
 

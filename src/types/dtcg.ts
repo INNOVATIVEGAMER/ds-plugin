@@ -97,6 +97,7 @@ export interface ExportConfig {
 // Output file structure
 export interface TokenFile {
   filename: string;      // e.g., "colors-light.json"
+  path: string;          // Full path for ZIP: e.g., "tokens/primitives/color.json"
   collectionName: string;
   modeName: string;
   content: DTCGTokenTree;

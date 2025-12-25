@@ -110,6 +110,7 @@ figma.ui.onmessage = async (msg: MessageFromUI) => {
             const typographyTree = convertTextStylesToDTCG(selectedTextStyles, config);
             result.push({
               filename: 'typography.json',
+              path: 'tokens/styles/typography.json',
               collectionName: 'Typography',
               modeName: 'Styles',
               content: typographyTree,
@@ -127,6 +128,7 @@ figma.ui.onmessage = async (msg: MessageFromUI) => {
             const shadowTree = convertEffectStylesToDTCG(selectedEffectStyles, config);
             result.push({
               filename: 'shadows.json',
+              path: 'tokens/styles/shadows.json',
               collectionName: 'Shadows',
               modeName: 'Styles',
               content: shadowTree,

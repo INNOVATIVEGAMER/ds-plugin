@@ -25,6 +25,7 @@ interface EffectStyleInfo {
 
 interface TokenFile {
   filename: string;
+  path: string;
   collectionName: string;
   modeName: string;
   content: Record<string, unknown>;
@@ -201,7 +202,8 @@ export default function App() {
   const downloadAllAsZip = async () => {
     const zip = new JSZip();
     files.forEach((file) => {
-      zip.file(file.filename, JSON.stringify(file.content, null, 2));
+      // Use the full path for folder structure in ZIP
+      zip.file(file.path, JSON.stringify(file.content, null, 2));
     });
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);

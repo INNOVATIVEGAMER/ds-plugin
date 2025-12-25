@@ -65,12 +65,13 @@ export function convertToDTCG(
         variableMap
       );
 
-      // Generate filename: lowercase with dashes
-      // Skip mode suffix if collection has only one mode
-      const filename = generateFilename(collection.name, mode.name, collection.modes.length === 1);
+      // Generate output path and filename based on collection name
+      const singleMode = collection.modes.length === 1;
+      const { path, filename } = generateOutputPath(collection.name, mode.name, singleMode);
 
       result.push({
         filename,
+        path,
         collectionName: collection.name,
         modeName: mode.name,
         content: tree,
@@ -82,22 +83,123 @@ export function convertToDTCG(
 }
 
 /**
- * Generate filename in lowercase with dashes
- * e.g., "My Colors" + "Light Mode" → "my-colors-light-mode.json"
- * If singleMode is true, omits the mode name: "my-colors.json"
+ * Sanitize string for use in filenames/paths
  */
-function generateFilename(collectionName: string, modeName: string, singleMode: boolean): string {
-  const sanitize = (str: string): string => {
-    return str
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dashes
-      .replace(/^-+|-+$/g, '');    // Trim leading/trailing dashes
-  };
+function sanitize(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dashes
+    .replace(/^-+|-+$/g, '');    // Trim leading/trailing dashes
+}
 
-  if (singleMode) {
-    return `${sanitize(collectionName)}.json`;
+/**
+ * Generate output path based on collection name and mode
+ * Maps collection names to folder structure:
+ * - Colors → tokens/primitives/color.json
+ * - Size → tokens/primitives/size/size-{mode}.json
+ * - Typography (primitives) → tokens/primitives/typography/typography-{mode}.json
+ * - Shadow (primitives) → tokens/primitives/shadow/shadow-{mode}.json
+ * - Radius/Border radius → tokens/primitives/radius/radius-{mode}.json
+ * - Border width → tokens/primitives/borderwidth/borderwidth-{mode}.json
+ * - Base → tokens/semantic/base-{palette}-{mode}.json
+ * - Brands → tokens/semantic/brands-{name}-{mode}.json
+ * - Spacing → tokens/semantic/spacing.json
+ */
+function generateOutputPath(collectionName: string, modeName: string, singleMode: boolean): { path: string; filename: string } {
+  const collectionLower = collectionName.toLowerCase();
+  const sanitizedMode = sanitize(modeName);
+
+  // Colors collection → primitives/color.json (single file)
+  if (collectionLower === 'colors' || collectionLower === 'color') {
+    return {
+      path: 'tokens/primitives/color.json',
+      filename: 'color.json'
+    };
   }
-  return `${sanitize(collectionName)}-${sanitize(modeName)}.json`;
+
+  // Size collection → primitives/size/size-{mode}.json
+  if (collectionLower === 'size' || collectionLower === 'sizes') {
+    const filename = singleMode ? 'size.json' : `size-${sanitizedMode}.json`;
+    return {
+      path: `tokens/primitives/size/${filename}`,
+      filename
+    };
+  }
+
+  // Typography primitives → primitives/typography/typography-{mode}.json
+  // (Note: This is for primitive typography variables, not text styles)
+  if (collectionLower === 'typography' || collectionLower.includes('typography primitive')) {
+    const filename = singleMode ? 'typography.json' : `typography-${sanitizedMode}.json`;
+    return {
+      path: `tokens/primitives/typography/${filename}`,
+      filename
+    };
+  }
+
+  // Shadow primitives → primitives/shadow/shadow-{mode}.json
+  // (Note: This is for primitive shadow variables, not effect styles)
+  if (collectionLower === 'shadow' || collectionLower === 'shadows' || collectionLower.includes('shadow primitive')) {
+    const filename = singleMode ? 'shadow.json' : `shadow-${sanitizedMode}.json`;
+    return {
+      path: `tokens/primitives/shadow/${filename}`,
+      filename
+    };
+  }
+
+  // Border radius / Radius → primitives/radius/radius-{mode}.json
+  if (collectionLower.includes('radius') || collectionLower.includes('border-radius')) {
+    const filename = singleMode ? 'radius.json' : `radius-${sanitizedMode}.json`;
+    return {
+      path: `tokens/primitives/radius/${filename}`,
+      filename
+    };
+  }
+
+  // Border width → primitives/borderwidth/borderwidth-{mode}.json
+  if (collectionLower.includes('border') && collectionLower.includes('width')) {
+    const filename = singleMode ? 'borderwidth.json' : `borderwidth-${sanitizedMode}.json`;
+    return {
+      path: `tokens/primitives/borderwidth/${filename}`,
+      filename
+    };
+  }
+
+  // Base colors → semantic/base-{palette}-{mode}.json
+  // Expects collection name like "Base" with modes like "gray-dark", "gray-light", etc.
+  if (collectionLower === 'base' || collectionLower.startsWith('base ') || collectionLower.startsWith('base-')) {
+    const filename = singleMode ? 'base.json' : `base-${sanitizedMode}.json`;
+    return {
+      path: `tokens/semantic/${filename}`,
+      filename
+    };
+  }
+
+  // Brands colors → semantic/brands-{name}-{mode}.json
+  if (collectionLower === 'brands' || collectionLower.startsWith('brands ') || collectionLower.startsWith('brands-')) {
+    const filename = singleMode ? 'brands.json' : `brands-${sanitizedMode}.json`;
+    return {
+      path: `tokens/semantic/${filename}`,
+      filename
+    };
+  }
+
+  // Spacing → semantic/spacing.json
+  if (collectionLower === 'spacing') {
+    return {
+      path: 'tokens/semantic/spacing.json',
+      filename: 'spacing.json'
+    };
+  }
+
+  // Default: put in tokens root with collection-mode naming
+  const sanitizedCollection = sanitize(collectionName);
+  const filename = singleMode
+    ? `${sanitizedCollection}.json`
+    : `${sanitizedCollection}-${sanitizedMode}.json`;
+  return {
+    path: `tokens/${filename}`,
+    filename
+  };
 }
 
 /**

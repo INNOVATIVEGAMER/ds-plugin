@@ -9,38 +9,35 @@ interface ExportOptionsProps {
 
 export default function ExportOptions({ options, onChange }: ExportOptionsProps) {
   return (
-    <section className="section">
-      <h2 className="section-title">Options</h2>
-      <div className="options-grid">
-        <label className="option-checkbox">
-          <input
-            type="checkbox"
-            checked={options.includeDescriptions}
-            onChange={(e) => onChange({ ...options, includeDescriptions: e.target.checked })}
-          />
-          Include descriptions
-        </label>
+    <div className="export-options-inline">
+      <label className="export-option-item">
+        <input
+          type="checkbox"
+          checked={options.includeDescriptions}
+          onChange={(e) => onChange({ ...options, includeDescriptions: e.target.checked })}
+        />
+        Descriptions
+      </label>
 
-        <label className="option-checkbox">
-          <input
-            type="checkbox"
-            checked={options.resolveReferences}
-            onChange={(e) => onChange({ ...options, resolveReferences: e.target.checked })}
-          />
-          Resolve references
-        </label>
+      <label className="export-option-item">
+        <input
+          type="checkbox"
+          checked={options.resolveReferences}
+          onChange={(e) => onChange({ ...options, resolveReferences: e.target.checked })}
+        />
+        Resolve refs
+      </label>
 
-        <div className="option-row">
-          <span>Color format:</span>
-          <select
-            value={options.colorFormat}
-            onChange={(e) => onChange({ ...options, colorFormat: e.target.value as ColorFormat })}
-          >
-            <option value="hex">Hex (#rrggbb)</option>
-            <option value="oklch">OKLCH</option>
-          </select>
-        </div>
-      </div>
-    </section>
+      <label className="export-option-item">
+        <span>Colors:</span>
+        <select
+          value={options.colorFormat}
+          onChange={(e) => onChange({ ...options, colorFormat: e.target.value as ColorFormat })}
+        >
+          <option value="hex">Hex</option>
+          <option value="oklch">OKLCH</option>
+        </select>
+      </label>
+    </div>
   );
 }

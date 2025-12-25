@@ -19,55 +19,60 @@ export default function CollectionSelector({
   onSelectAll,
   onDeselectAll,
 }: CollectionSelectorProps) {
+  const allSelected = collections.length > 0 && selectedCollections.length === collections.length;
+
   return (
-    <section className="section">
-      <div className="section-header">
-        <h2 className="section-title">Collections</h2>
-        <div className="section-actions">
-          <button className="btn-link" onClick={onSelectAll}>
-            Select all
-          </button>
-          <span className="divider">|</span>
-          <button className="btn-link" onClick={onDeselectAll}>
-            Deselect all
+    <>
+      <div className="export-section-header">
+        <span className="export-section-title">Collections</span>
+        <div className="export-section-actions">
+          <button
+            className="btn btn-ghost btn-xs"
+            onClick={allSelected ? onDeselectAll : onSelectAll}
+          >
+            {allSelected ? 'None' : 'All'}
           </button>
         </div>
       </div>
 
-      {collections.length === 0 ? (
-        <p className="empty-state">No variable collections found in this file.</p>
-      ) : (
-        <div className="collections-list">
-          {collections.map((c) => (
-            <div key={c.id} className="collection-checkbox">
-              <label className="collection-header">
-                <input
-                  type="checkbox"
-                  checked={selectedCollections.includes(c.id)}
-                  onChange={() => onToggleCollection(c.id)}
-                />
-                <span className="collection-name">{c.name}</span>
-                <span className="collection-count">{c.variableCount} variables</span>
-              </label>
+      <div className="export-list">
+        {collections.length === 0 ? (
+          <div className="export-empty-state">No collections found</div>
+        ) : (
+          collections.map((c) => {
+            const isSelected = selectedCollections.includes(c.id);
+            const collectionModes = selectedModes[c.id] || [];
 
-              {selectedCollections.includes(c.id) && c.modes.length > 1 && (
-                <div className="modes-list">
-                  {c.modes.map((mode) => (
-                    <label key={mode.modeId} className="mode-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={(selectedModes[c.id] || []).includes(mode.modeId)}
-                        onChange={() => onToggleMode(c.id, mode.modeId)}
-                      />
-                      {mode.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
+            return (
+              <div key={c.id} className="export-collection-item">
+                <label className="export-collection-header">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleCollection(c.id)}
+                  />
+                  <span className="export-collection-name">{c.name}</span>
+                  <span className="export-collection-count">{c.variableCount}</span>
+                </label>
+
+                {isSelected && c.modes.length > 1 && (
+                  <div className="export-modes">
+                    {c.modes.map((mode) => (
+                      <span
+                        key={mode.modeId}
+                        className={`export-mode-pill ${collectionModes.includes(mode.modeId) ? 'selected' : ''}`}
+                        onClick={() => onToggleMode(c.id, mode.modeId)}
+                      >
+                        {mode.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </>
   );
 }

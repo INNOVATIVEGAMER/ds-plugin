@@ -25,83 +25,70 @@ export default function StyleSelector({
   onSelectAllEffects,
   onDeselectAllEffects,
 }: StyleSelectorProps) {
+  const allTextSelected = textStyles.length > 0 && selectedTextStyles.length === textStyles.length;
+  const allEffectsSelected = effectStyles.length > 0 && selectedEffectStyles.length === effectStyles.length;
+
   return (
     <>
-      {/* Text Styles Section */}
-      <section className="section">
-        <div className="section-header">
-          <h2 className="section-title">Text Styles</h2>
-          {textStyles.length > 0 && (
-            <div className="section-actions">
-              <button className="btn-link" onClick={onSelectAllText}>
-                Select all
-              </button>
-              <span className="divider">|</span>
-              <button className="btn-link" onClick={onDeselectAllText}>
-                Deselect all
+      <div className="export-section-header">
+        <span className="export-section-title">Styles</span>
+      </div>
+
+      <div className="export-list">
+        {/* Text Styles */}
+        {textStyles.length > 0 && (
+          <div className="export-styles-subsection">
+            <div className="export-styles-subsection-header">
+              <span className="export-styles-subsection-title">Text Styles</span>
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={allTextSelected ? onDeselectAllText : onSelectAllText}
+              >
+                {allTextSelected ? 'None' : 'All'}
               </button>
             </div>
-          )}
-        </div>
-
-        {textStyles.length === 0 ? (
-          <p className="empty-state">No text styles found in this file.</p>
-        ) : (
-          <div className="styles-list">
             {textStyles.map((s) => (
-              <label key={s.id} className="style-checkbox">
+              <label key={s.id} className="export-style-item">
                 <input
                   type="checkbox"
                   checked={selectedTextStyles.includes(s.id)}
                   onChange={() => onToggleTextStyle(s.id)}
                 />
-                <span className="style-name">{s.name}</span>
-                <span className="style-meta">
-                  {s.fontFamily} · {s.fontWeight} · {s.fontSize.startsWith('{') ? s.fontSize : `${s.fontSize}px`}
-                </span>
+                <span className="export-style-name">{s.name}</span>
               </label>
             ))}
           </div>
         )}
-      </section>
 
-      {/* Effect Styles Section */}
-      <section className="section">
-        <div className="section-header">
-          <h2 className="section-title">Effect Styles</h2>
-          {effectStyles.length > 0 && (
-            <div className="section-actions">
-              <button className="btn-link" onClick={onSelectAllEffects}>
-                Select all
-              </button>
-              <span className="divider">|</span>
-              <button className="btn-link" onClick={onDeselectAllEffects}>
-                Deselect all
+        {/* Effect Styles */}
+        {effectStyles.length > 0 && (
+          <div className="export-styles-subsection">
+            <div className="export-styles-subsection-header">
+              <span className="export-styles-subsection-title">Effect Styles</span>
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={allEffectsSelected ? onDeselectAllEffects : onSelectAllEffects}
+              >
+                {allEffectsSelected ? 'None' : 'All'}
               </button>
             </div>
-          )}
-        </div>
-
-        {effectStyles.length === 0 ? (
-          <p className="empty-state">No effect styles found in this file.</p>
-        ) : (
-          <div className="styles-list">
             {effectStyles.map((s) => (
-              <label key={s.id} className="style-checkbox">
+              <label key={s.id} className="export-style-item">
                 <input
                   type="checkbox"
                   checked={selectedEffectStyles.includes(s.id)}
                   onChange={() => onToggleEffectStyle(s.id)}
                 />
-                <span className="style-name">{s.name}</span>
-                <span className="style-meta">
-                  {s.effectCount} {s.effectCount === 1 ? 'effect' : 'effects'} · {s.effectTypes.join(', ')}
-                </span>
+                <span className="export-style-name">{s.name}</span>
               </label>
             ))}
           </div>
         )}
-      </section>
+
+        {textStyles.length === 0 && effectStyles.length === 0 && (
+          <div className="export-empty-state">No styles found</div>
+        )}
+      </div>
     </>
   );
 }

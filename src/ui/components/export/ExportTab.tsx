@@ -108,58 +108,81 @@ export default function ExportTab({
     await navigator.clipboard.writeText(JSON.stringify(file.content, null, 2));
   };
 
+  const hasStyles = textStyles.length > 0 || effectStyles.length > 0;
+
   return (
     <div className="export-tab">
-      <div className="export-content">
-        <CollectionSelector
-          collections={collections}
-          selectedCollections={selectedCollections}
-          selectedModes={selectedModes}
-          onToggleCollection={onToggleCollection}
-          onToggleMode={onToggleMode}
-          onSelectAll={onSelectAllCollections}
-          onDeselectAll={onDeselectAllCollections}
-        />
+      {/* Sidebar with selections */}
+      <div className="export-sidebar">
+        <div className="export-sidebar-section">
+          <CollectionSelector
+            collections={collections}
+            selectedCollections={selectedCollections}
+            selectedModes={selectedModes}
+            onToggleCollection={onToggleCollection}
+            onToggleMode={onToggleMode}
+            onSelectAll={onSelectAllCollections}
+            onDeselectAll={onDeselectAllCollections}
+          />
+        </div>
 
-        <StyleSelector
-          textStyles={textStyles}
-          effectStyles={effectStyles}
-          selectedTextStyles={selectedTextStyles}
-          selectedEffectStyles={selectedEffectStyles}
-          onToggleTextStyle={onToggleTextStyle}
-          onToggleEffectStyle={onToggleEffectStyle}
-          onSelectAllText={onSelectAllTextStyles}
-          onDeselectAllText={onDeselectAllTextStyles}
-          onSelectAllEffects={onSelectAllEffectStyles}
-          onDeselectAllEffects={onDeselectAllEffectStyles}
-        />
-
-        <ExportOptions options={options} onChange={onOptionsChange} />
-
-        {error && <p className="error-message">{error}</p>}
+        {hasStyles && (
+          <div className="export-sidebar-section">
+            <StyleSelector
+              textStyles={textStyles}
+              effectStyles={effectStyles}
+              selectedTextStyles={selectedTextStyles}
+              selectedEffectStyles={selectedEffectStyles}
+              onToggleTextStyle={onToggleTextStyle}
+              onToggleEffectStyle={onToggleEffectStyle}
+              onSelectAllText={onSelectAllTextStyles}
+              onDeselectAllText={onDeselectAllTextStyles}
+              onSelectAllEffects={onSelectAllEffectStyles}
+              onDeselectAllEffects={onDeselectAllEffectStyles}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="export-button-container">
-        <button
-          className="btn btn-primary btn-lg"
-          onClick={onExport}
-          disabled={isLoading || !hasSelection}
-          style={{ width: '100%' }}
-        >
-          {isLoading ? 'Generating...' : `Generate ${totalTokens} tokens`}
-        </button>
-      </div>
+      {/* Main content area */}
+      <div className="export-main">
+        {/* Options toolbar + Generate button */}
+        <div className="export-toolbar">
+          <ExportOptions options={options} onChange={onOptionsChange} />
+          <button
+            className="btn btn-primary export-generate-btn"
+            onClick={onExport}
+            disabled={isLoading || !hasSelection}
+          >
+            {isLoading ? 'Generating...' : `Generate ${totalTokens} tokens`}
+          </button>
+        </div>
 
-      {files.length > 0 && (
-        <FilePreview
-          files={files}
-          selectedIndex={selectedFileIndex}
-          onSelectFile={onSelectFile}
-          onDownloadFile={downloadFile}
-          onDownloadAll={downloadAllAsZip}
-          onCopy={copyToClipboard}
-        />
-      )}
+        {error && <div className="export-error">{error}</div>}
+
+        {/* File preview area */}
+        <div className="export-preview-area">
+          {files.length > 0 ? (
+            <FilePreview
+              files={files}
+              selectedIndex={selectedFileIndex}
+              onSelectFile={onSelectFile}
+              onDownloadFile={downloadFile}
+              onDownloadAll={downloadAllAsZip}
+              onCopy={copyToClipboard}
+            />
+          ) : (
+            <div className="export-empty-preview">
+              <div className="export-empty-icon">{ }</div>
+              <div className="export-empty-text">
+                {hasSelection
+                  ? 'Click "Generate" to preview tokens'
+                  : 'Select collections or styles to export'}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

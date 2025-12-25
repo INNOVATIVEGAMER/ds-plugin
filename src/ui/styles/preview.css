@@ -234,7 +234,7 @@
 }
 
 .mode-button:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-text-muted);
 }
 
 .mode-button.active {

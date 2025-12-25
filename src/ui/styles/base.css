@@ -14,10 +14,10 @@ body {
   line-height: var(--line-height);
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - thin and subtle */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -25,19 +25,19 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* Dark scrollbar variant */
 .scrollbar-dark::-webkit-scrollbar-thumb {
-  background: #555;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .scrollbar-dark::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: rgba(255, 255, 255, 0.3);
 }

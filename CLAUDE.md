@@ -33,20 +33,23 @@ This plugin uses Figma's dual-context architecture:
 
 ### Message Flow
 
-- **UI → Sandbox:** `GET_COLLECTIONS`, `GET_STYLES`, `EXPORT`, `CLOSE`
-- **Sandbox → UI:** `COLLECTIONS_DATA`, `STYLES_DATA`, `EXPORT_RESULT`, `EXPORT_ERROR`
+- **UI → Sandbox:** `GET_COLLECTIONS`, `GET_STYLES`, `GET_PREVIEW_DATA`, `GET_STYLES_PREVIEW`, `EXPORT`, `CLOSE`
+- **Sandbox → UI:** `COLLECTIONS_DATA`, `STYLES_DATA`, `PREVIEW_DATA`, `STYLES_PREVIEW_DATA`, `EXPORT_RESULT`, `EXPORT_ERROR`
 
 ## Key Files
 
-| File                 | Purpose                                                      |
-| -------------------- | ------------------------------------------------------------ |
-| `src/code.ts`        | Figma sandbox code - message handler, API orchestration      |
-| `src/lib/extract.ts` | Variable & style extraction from Figma API                   |
-| `src/lib/convert.ts` | DTCG conversion logic, color math, typography & shadow conversion |
-| `src/types/dtcg.ts`  | TypeScript types for DTCG format                             |
-| `src/ui/App.tsx`     | Main React UI component                                      |
-| `src/ui/styles.css`  | UI styling                                                   |
-| `manifest.json`      | Figma plugin metadata                                        |
+| File                      | Purpose                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| `src/code.ts`             | Figma sandbox code - message handler, API orchestration      |
+| `src/lib/extract.ts`      | Variable & style extraction from Figma API                   |
+| `src/lib/convert.ts`      | DTCG conversion logic, color math, typography & shadow       |
+| `src/lib/stylesPreview.ts`| Styles preview data extraction with mode-aware resolution    |
+| `src/types/dtcg.ts`       | TypeScript types for DTCG format                             |
+| `src/ui/App.tsx`          | Main React UI with tab navigation (Preview/Export)           |
+| `src/ui/types/ui.ts`      | UI-specific TypeScript types                                 |
+| `src/ui/utils/tokenHelpers.ts` | Token flattening, grouping, and display helpers         |
+| `src/ui/styles/`          | Modular CSS (variables, components, preview, export)         |
+| `manifest.json`           | Figma plugin metadata                                        |
 
 ## Build Commands
 
@@ -76,18 +79,63 @@ npm run build:ui
 
 ```
 src/
-├── code.ts              # Plugin entry point (sandbox context)
+├── code.ts                    # Plugin entry point (sandbox context)
 ├── lib/
-│   ├── extract.ts       # extractAllCollections(), extractTextStyles(), extractEffectStyles()
-│   └── convert.ts       # convertToDTCG(), convertTextStylesToDTCG(), convertEffectStylesToDTCG()
+│   ├── extract.ts             # extractAllCollections(), extractTextStyles(), extractEffectStyles()
+│   ├── convert.ts             # convertToDTCG(), convertTextStylesToDTCG(), convertEffectStylesToDTCG()
+│   └── stylesPreview.ts       # getStylesPreview() - mode-aware style preview extraction
 ├── types/
-│   └── dtcg.ts          # DTCG type definitions (tokens, typography, shadow)
+│   └── dtcg.ts                # DTCG type definitions (tokens, typography, shadow)
 └── ui/
-    ├── App.tsx          # React UI with collection/style selection
-    ├── main.tsx         # React entry
-    ├── index.html       # HTML template
-    └── styles.css       # Styling
+    ├── App.tsx                # Main app with tab navigation
+    ├── main.tsx               # React entry
+    ├── index.html             # HTML template
+    ├── components/
+    │   ├── Tabs.tsx           # Tab bar component
+    │   ├── preview/           # Preview tab components
+    │   │   ├── PreviewTab.tsx
+    │   │   ├── CollectionSidebar.tsx
+    │   │   ├── TokenGrid.tsx
+    │   │   ├── StylesGrid.tsx
+    │   │   └── cards/         # Token visualization cards (11 types)
+    │   └── export/            # Export tab components
+    │       ├── ExportTab.tsx
+    │       ├── CollectionSelector.tsx
+    │       ├── StyleSelector.tsx
+    │       ├── ExportOptions.tsx
+    │       └── FilePreview.tsx
+    ├── styles/                # Modular CSS
+    │   ├── variables.css      # Design tokens (colors, spacing, typography)
+    │   ├── base.css           # Reset, scrollbars
+    │   ├── components.css     # Buttons, forms, badges
+    │   ├── tabs.css           # Tab navigation
+    │   ├── preview.css        # Preview tab styles
+    │   └── export.css         # Export tab styles
+    ├── types/
+    │   └── ui.ts              # UI-specific types (FlattenedToken, CollectionInfo, etc.)
+    └── utils/
+        ├── tokenHelpers.ts    # flattenTokens(), groupTokens(), formatTokenName()
+        └── cssVariables.ts    # generateCSSVariables() for live preview
 ```
+
+## UI Architecture
+
+The plugin has two main tabs:
+
+### Preview Tab
+Visual token browser with:
+- **Sidebar:** Collection/group tree navigation with token counts
+- **Mode Selector:** Switch between collection modes (Light/Dark, etc.)
+- **Token Grid:** Visual cards for each token type:
+  - ColorCard, SizeCard, RadiusCard, BorderWidthCard
+  - TypographyCard, FontFamilyCard, NumberCard, ShadowCard
+  - TextStyleCard, EffectStyleCard (for Figma styles)
+
+### Export Tab
+DTCG JSON export with:
+- **Sidebar:** Collection and style selection with mode pills
+- **Toolbar:** Export options (descriptions, resolve refs, color format)
+- **Preview Area:** Generated JSON with file tabs, copy/download
 
 ## Key Conversion Pipeline
 

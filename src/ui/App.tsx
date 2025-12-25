@@ -1,39 +1,20 @@
 import { useState, useEffect } from 'react';
-import JSZip from 'jszip';
-
-interface CollectionInfo {
-  id: string;
-  name: string;
-  modes: Array<{ modeId: string; name: string }>;
-  variableCount: number;
-}
-
-interface TextStyleInfo {
-  id: string;
-  name: string;
-  fontFamily: string;
-  fontWeight: string;  // Value or variable reference like "{weight/semibold}"
-  fontSize: string;    // Value or variable reference like "{size/base}"
-}
-
-interface EffectStyleInfo {
-  id: string;
-  name: string;
-  effectCount: number;
-  effectTypes: string[];
-}
-
-interface TokenFile {
-  filename: string;
-  path: string;
-  collectionName: string;
-  modeName: string;
-  content: Record<string, unknown>;
-}
-
-type ColorFormat = 'hex' | 'oklch';
+import Tabs from './components/Tabs';
+import PreviewTab from './components/preview/PreviewTab';
+import ExportTab from './components/export/ExportTab';
+import type {
+  TabId,
+  CollectionInfo,
+  TextStyleInfo,
+  EffectStyleInfo,
+  TokenFile,
+  ExportOptions,
+} from './types/ui';
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<TabId>('preview');
+
+  // Collections state
   const [collections, setCollections] = useState<CollectionInfo[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [selectedModes, setSelectedModes] = useState<Record<string, string[]>>({});
@@ -44,19 +25,20 @@ export default function App() {
   const [selectedTextStyles, setSelectedTextStyles] = useState<string[]>([]);
   const [selectedEffectStyles, setSelectedEffectStyles] = useState<string[]>([]);
 
-  const [options, setOptions] = useState({
+  // Export options
+  const [options, setOptions] = useState<ExportOptions>({
     includeDescriptions: true,
-    colorFormat: 'hex' as ColorFormat,
+    colorFormat: 'hex',
     resolveReferences: false,
   });
 
+  // Export results
   const [files, setFiles] = useState<TokenFile[]>([]);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Fetch both collections and styles on load
     parent.postMessage({ pluginMessage: { type: 'GET_COLLECTIONS' } }, '*');
     parent.postMessage({ pluginMessage: { type: 'GET_STYLES' } }, '*');
 
@@ -78,7 +60,6 @@ export default function App() {
         case 'STYLES_DATA':
           setTextStyles(msg.payload.textStyles);
           setEffectStyles(msg.payload.effectStyles);
-          // Select all styles by default
           setSelectedTextStyles(msg.payload.textStyles.map((s: TextStyleInfo) => s.id));
           setSelectedEffectStyles(msg.payload.effectStyles.map((s: EffectStyleInfo) => s.id));
           break;
@@ -101,6 +82,7 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // Collection handlers
   const toggleCollection = (id: string) => {
     setSelectedCollections((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
@@ -131,7 +113,7 @@ export default function App() {
     setSelectedModes({});
   };
 
-  // Style toggle functions
+  // Style handlers
   const toggleTextStyle = (id: string) => {
     setSelectedTextStyles((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
@@ -144,22 +126,12 @@ export default function App() {
     );
   };
 
-  const selectAllTextStyles = () => {
-    setSelectedTextStyles(textStyles.map((s) => s.id));
-  };
+  const selectAllTextStyles = () => setSelectedTextStyles(textStyles.map((s) => s.id));
+  const deselectAllTextStyles = () => setSelectedTextStyles([]);
+  const selectAllEffectStyles = () => setSelectedEffectStyles(effectStyles.map((s) => s.id));
+  const deselectAllEffectStyles = () => setSelectedEffectStyles([]);
 
-  const deselectAllTextStyles = () => {
-    setSelectedTextStyles([]);
-  };
-
-  const selectAllEffectStyles = () => {
-    setSelectedEffectStyles(effectStyles.map((s) => s.id));
-  };
-
-  const deselectAllEffectStyles = () => {
-    setSelectedEffectStyles([]);
-  };
-
+  // Export handler
   const handleExport = () => {
     setIsLoading(true);
     setError('');
@@ -186,267 +158,61 @@ export default function App() {
     );
   };
 
-  const downloadFile = (file: TokenFile) => {
-    const json = JSON.stringify(file.content, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadAllAsZip = async () => {
-    const zip = new JSZip();
-    files.forEach((file) => {
-      // Use the full path for folder structure in ZIP
-      zip.file(file.path, JSON.stringify(file.content, null, 2));
-    });
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'design-tokens.zip';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copyToClipboard = async (file: TokenFile) => {
-    await navigator.clipboard.writeText(JSON.stringify(file.content, null, 2));
-  };
-
+  // Computed values
   const totalVariables = collections
     .filter((c) => selectedCollections.includes(c.id))
     .reduce((sum, c) => sum + c.variableCount, 0);
 
   const totalTokens = totalVariables + selectedTextStyles.length + selectedEffectStyles.length;
-  const hasSelection = selectedCollections.length > 0 || selectedTextStyles.length > 0 || selectedEffectStyles.length > 0;
+  const hasSelection =
+    selectedCollections.length > 0 ||
+    selectedTextStyles.length > 0 ||
+    selectedEffectStyles.length > 0;
 
   return (
     <div className="app">
-      <header className="header">
+      <header className="app-header">
         <h1>DTCG Token Exporter</h1>
-        <p className="subtitle">Export Figma Variables to W3C DTCG format</p>
+        <p className="app-subtitle">Export Figma Variables to W3C DTCG format</p>
       </header>
 
-      <section className="section">
-        <div className="section-header">
-          <h2>Collections</h2>
-          <div className="section-actions">
-            <button className="link-btn" onClick={selectAllCollections}>
-              Select all
-            </button>
-            <span className="divider">|</span>
-            <button className="link-btn" onClick={deselectAllCollections}>
-              Deselect all
-            </button>
-          </div>
-        </div>
+      <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {collections.length === 0 ? (
-          <p className="empty">No variable collections found in this file.</p>
+      <div className="tab-content">
+        {activeTab === 'preview' ? (
+          <PreviewTab collections={collections} />
         ) : (
-          <div className="collections-list">
-            {collections.map((c) => (
-              <div key={c.id} className="collection">
-                <label className="collection-header">
-                  <input
-                    type="checkbox"
-                    checked={selectedCollections.includes(c.id)}
-                    onChange={() => toggleCollection(c.id)}
-                  />
-                  <span className="collection-name">{c.name}</span>
-                  <span className="count">{c.variableCount} variables</span>
-                </label>
-
-                {selectedCollections.includes(c.id) && c.modes.length > 1 && (
-                  <div className="modes">
-                    {c.modes.map((mode) => (
-                      <label key={mode.modeId} className="mode-label">
-                        <input
-                          type="checkbox"
-                          checked={(selectedModes[c.id] || []).includes(mode.modeId)}
-                          onChange={() => toggleMode(c.id, mode.modeId)}
-                        />
-                        {mode.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <ExportTab
+            collections={collections}
+            selectedCollections={selectedCollections}
+            selectedModes={selectedModes}
+            onToggleCollection={toggleCollection}
+            onToggleMode={toggleMode}
+            onSelectAllCollections={selectAllCollections}
+            onDeselectAllCollections={deselectAllCollections}
+            textStyles={textStyles}
+            effectStyles={effectStyles}
+            selectedTextStyles={selectedTextStyles}
+            selectedEffectStyles={selectedEffectStyles}
+            onToggleTextStyle={toggleTextStyle}
+            onToggleEffectStyle={toggleEffectStyle}
+            onSelectAllTextStyles={selectAllTextStyles}
+            onDeselectAllTextStyles={deselectAllTextStyles}
+            onSelectAllEffectStyles={selectAllEffectStyles}
+            onDeselectAllEffectStyles={deselectAllEffectStyles}
+            options={options}
+            onOptionsChange={setOptions}
+            onExport={handleExport}
+            isLoading={isLoading}
+            error={error}
+            totalTokens={totalTokens}
+            hasSelection={hasSelection}
+            files={files}
+            selectedFileIndex={selectedFileIndex}
+            onSelectFile={setSelectedFileIndex}
+          />
         )}
-      </section>
-
-      {/* Text Styles Section */}
-      <section className="section">
-        <div className="section-header">
-          <h2>Text Styles</h2>
-          {textStyles.length > 0 && (
-            <div className="section-actions">
-              <button className="link-btn" onClick={selectAllTextStyles}>
-                Select all
-              </button>
-              <span className="divider">|</span>
-              <button className="link-btn" onClick={deselectAllTextStyles}>
-                Deselect all
-              </button>
-            </div>
-          )}
-        </div>
-
-        {textStyles.length === 0 ? (
-          <p className="empty">No text styles found in this file.</p>
-        ) : (
-          <div className="styles-list">
-            {textStyles.map((s) => (
-              <label key={s.id} className="style-item">
-                <input
-                  type="checkbox"
-                  checked={selectedTextStyles.includes(s.id)}
-                  onChange={() => toggleTextStyle(s.id)}
-                />
-                <span className="style-name">{s.name}</span>
-                <span className="style-meta">
-                  {s.fontFamily} · {s.fontWeight} · {s.fontSize.startsWith('{') ? s.fontSize : `${s.fontSize}px`}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Effect Styles Section */}
-      <section className="section">
-        <div className="section-header">
-          <h2>Effect Styles</h2>
-          {effectStyles.length > 0 && (
-            <div className="section-actions">
-              <button className="link-btn" onClick={selectAllEffectStyles}>
-                Select all
-              </button>
-              <span className="divider">|</span>
-              <button className="link-btn" onClick={deselectAllEffectStyles}>
-                Deselect all
-              </button>
-            </div>
-          )}
-        </div>
-
-        {effectStyles.length === 0 ? (
-          <p className="empty">No effect styles found in this file.</p>
-        ) : (
-          <div className="styles-list">
-            {effectStyles.map((s) => (
-              <label key={s.id} className="style-item">
-                <input
-                  type="checkbox"
-                  checked={selectedEffectStyles.includes(s.id)}
-                  onChange={() => toggleEffectStyle(s.id)}
-                />
-                <span className="style-name">{s.name}</span>
-                <span className="style-meta">
-                  {s.effectCount} {s.effectCount === 1 ? 'effect' : 'effects'} · {s.effectTypes.join(', ')}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="section">
-        <h2>Options</h2>
-        <div className="options-grid">
-          <label className="option-checkbox">
-            <input
-              type="checkbox"
-              checked={options.includeDescriptions}
-              onChange={(e) => setOptions({ ...options, includeDescriptions: e.target.checked })}
-            />
-            Include descriptions
-          </label>
-
-          <label className="option-checkbox">
-            <input
-              type="checkbox"
-              checked={options.resolveReferences}
-              onChange={(e) => setOptions({ ...options, resolveReferences: e.target.checked })}
-            />
-            Resolve references
-          </label>
-
-          <div className="option-row">
-            <span>Color format:</span>
-            <select
-              value={options.colorFormat}
-              onChange={(e) => setOptions({ ...options, colorFormat: e.target.value as ColorFormat })}
-            >
-              <option value="hex">Hex (#rrggbb)</option>
-              <option value="oklch">OKLCH</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <button
-        className="primary-btn"
-        onClick={handleExport}
-        disabled={isLoading || !hasSelection}
-      >
-        {isLoading ? 'Generating...' : `Generate ${totalTokens} tokens`}
-      </button>
-
-      {error && <p className="error">{error}</p>}
-
-      {files.length > 0 && (
-        <section className="section results">
-          <div className="section-header">
-            <h2>Generated Files ({files.length})</h2>
-            <button className="secondary-btn" onClick={downloadAllAsZip}>
-              Download ZIP
-            </button>
-          </div>
-
-          <div className="file-tabs">
-            {files.map((file, index) => (
-              <button
-                key={file.filename}
-                className={`file-tab ${index === selectedFileIndex ? 'active' : ''}`}
-                onClick={() => setSelectedFileIndex(index)}
-              >
-                {file.filename.replace('.json', '')}
-              </button>
-            ))}
-          </div>
-
-          {files[selectedFileIndex] && (
-            <div className="preview-container">
-              <div className="preview-header">
-                <span className="filename">{files[selectedFileIndex].filename}</span>
-                <div className="preview-actions">
-                  <button
-                    className="icon-btn"
-                    onClick={() => copyToClipboard(files[selectedFileIndex])}
-                  >
-                    Copy
-                  </button>
-                  <button
-                    className="icon-btn"
-                    onClick={() => downloadFile(files[selectedFileIndex])}
-                  >
-                    Download
-                  </button>
-                </div>
-              </div>
-              <pre className="preview">
-                {JSON.stringify(files[selectedFileIndex].content, null, 2)}
-              </pre>
-            </div>
-          )}
-        </section>
-      )}
+      </div>
     </div>
   );
 }

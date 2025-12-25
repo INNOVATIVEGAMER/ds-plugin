@@ -5,10 +5,11 @@
 
 import { extractAllCollections, extractTextStyles, extractEffectStyles } from './lib/extract';
 import { convertToDTCG, buildVariableMap, convertTextStylesToDTCG, convertEffectStylesToDTCG } from './lib/convert';
+import { getStylesPreview, type StylesPreviewResult } from './lib/stylesPreview';
 import type { ExportConfig, TokenFile, TextStyleInfo, EffectStyleInfo } from './types/dtcg';
 
-// Show the UI - sized for comfortable use on 13" MacBook screens
-figma.showUI(__html__, { width: 560, height: 720 });
+// Show the UI - wider layout for preview grid
+figma.showUI(__html__, { width: 900, height: 720 });
 
 // ============================================
 // Message Types
@@ -26,15 +27,27 @@ interface StylesData {
   effectStyles: EffectStyleInfo[];
 }
 
+interface PreviewData {
+  collectionId: string;
+  collectionName: string;
+  modeId: string;
+  modeName: string;
+  tokenTree: Record<string, unknown>;
+}
+
 type MessageToUI =
   | { type: 'COLLECTIONS_DATA'; payload: CollectionInfo[] }
   | { type: 'STYLES_DATA'; payload: StylesData }
+  | { type: 'STYLES_PREVIEW_DATA'; payload: StylesPreviewResult }
+  | { type: 'PREVIEW_DATA'; payload: PreviewData }
   | { type: 'EXPORT_RESULT'; payload: TokenFile[] }
   | { type: 'EXPORT_ERROR'; payload: string };
 
 type MessageFromUI =
   | { type: 'GET_COLLECTIONS' }
   | { type: 'GET_STYLES' }
+  | { type: 'GET_STYLES_PREVIEW'; payload?: { modeId?: string; viewType?: 'text' | 'effect' } }
+  | { type: 'GET_PREVIEW_DATA'; payload: { collectionId: string; modeId: string } }
   | { type: 'EXPORT'; payload: ExportConfig }
   | { type: 'CLOSE' };
 
@@ -78,6 +91,60 @@ figma.ui.onmessage = async (msg: MessageFromUI) => {
         figma.ui.postMessage({
           type: 'STYLES_DATA',
           payload: { textStyles: textStylesInfo, effectStyles: effectStylesInfo },
+        } as MessageToUI);
+        break;
+      }
+
+      case 'GET_STYLES_PREVIEW': {
+        const payload = await getStylesPreview(
+          msg.payload?.modeId || null,
+          msg.payload?.viewType || null
+        );
+        figma.ui.postMessage({ type: 'STYLES_PREVIEW_DATA', payload } as MessageToUI);
+        break;
+      }
+
+      case 'GET_PREVIEW_DATA': {
+        const { collectionId, modeId } = msg.payload;
+        const allCollections = await extractAllCollections();
+        const collection = allCollections.find((c) => c.id === collectionId);
+
+        if (!collection) {
+          figma.ui.postMessage({
+            type: 'EXPORT_ERROR',
+            payload: 'Collection not found',
+          } as MessageToUI);
+          break;
+        }
+
+        const mode = collection.modes.find((m) => m.modeId === modeId);
+        const variableMap = buildVariableMap(allCollections);
+
+        // Build token tree for this single mode
+        const previewConfig: ExportConfig = {
+          collections: [collectionId],
+          modes: { [collectionId]: [modeId] },
+          includeDescriptions: true,
+          colorFormat: 'hex',
+          resolveReferences: true, // Always resolve for preview
+          exportTextStyles: false,
+          exportEffectStyles: false,
+          selectedTextStyles: [],
+          selectedEffectStyles: [],
+        };
+
+        const files = convertToDTCG([collection], previewConfig, variableMap);
+        const tokenTree = files.length > 0 ? files[0].content : {};
+
+        figma.ui.postMessage({
+          type: 'PREVIEW_DATA',
+          payload: {
+            collectionId,
+            collectionName: collection.name,
+            modeId,
+            modeName: mode?.name || 'Default',
+            tokenTree,
+          },
         } as MessageToUI);
         break;
       }

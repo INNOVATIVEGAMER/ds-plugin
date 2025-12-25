@@ -46,7 +46,6 @@ export default function App() {
 
   const [options, setOptions] = useState({
     includeDescriptions: true,
-    defaultUnit: 'px' as 'px' | 'rem',
     colorFormat: 'hex' as ColorFormat,
     resolveReferences: false,
   });
@@ -174,7 +173,6 @@ export default function App() {
             collections: selectedCollections,
             modes: selectedModes,
             includeDescriptions: options.includeDescriptions,
-            defaultUnit: options.defaultUnit,
             colorFormat: options.colorFormat,
             resolveReferences: options.resolveReferences,
             exportTextStyles: selectedTextStyles.length > 0,
@@ -378,17 +376,6 @@ export default function App() {
             />
             Resolve references
           </label>
-
-          <div className="option-row">
-            <span>Dimension unit:</span>
-            <select
-              value={options.defaultUnit}
-              onChange={(e) => setOptions({ ...options, defaultUnit: e.target.value as 'px' | 'rem' })}
-            >
-              <option value="px">px</option>
-              <option value="rem">rem</option>
-            </select>
-          </div>
 
           <div className="option-row">
             <span>Color format:</span>

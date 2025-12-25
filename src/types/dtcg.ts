@@ -84,7 +84,6 @@ export interface ExportConfig {
   collections: string[];           // Collection IDs to export
   modes: Record<string, string[]>; // Collection ID → selected Mode IDs
   includeDescriptions: boolean;
-  defaultUnit: 'px' | 'rem';
   colorFormat: ColorFormat;        // 'hex' (default) or 'oklch'
   resolveReferences: boolean;      // true = flatten aliases to actual values
   // Style export options

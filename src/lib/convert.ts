@@ -220,22 +220,9 @@ function buildTokenTree(
     // Split path: "colors/brand/primary" → ["colors", "brand", "primary"]
     const pathParts = variable.name.split('/');
     const tokenName = pathParts.pop()!;
+    const group = getOrCreateGroup(tree, pathParts);
 
-    // Navigate/create nested groups
-    let current: DTCGTokenTree = tree;
-    for (const part of pathParts) {
-      if (
-        !current[part] ||
-        typeof current[part] !== 'object' ||
-        '$value' in (current[part] as object)
-      ) {
-        current[part] = {};
-      }
-      current = current[part] as DTCGTokenTree;
-    }
-
-    // Create the token
-    current[tokenName] = createToken(variable, modeValue, modeId, config, variableMap);
+    group[tokenName] = createToken(variable, modeValue, modeId, config, variableMap);
   }
 
   return tree;
@@ -294,7 +281,7 @@ function convertValue(
       return convertColor(value as RGBA, config.colorFormat);
 
     case 'FLOAT':
-      return convertFloat(value as number, variable, config.defaultUnit);
+      return convertFloat(value as number, variable);
 
     case 'STRING':
       return value as string;
@@ -358,7 +345,7 @@ function resolveAlias(
       return convertColor(value as RGBA, config.colorFormat);
 
     case 'FLOAT':
-      return convertFloat(value as number, referenced, config.defaultUnit);
+      return convertFloat(value as number, referenced);
 
     case 'STRING':
       return value as string;
@@ -473,12 +460,34 @@ function srgbToLinear(c: number): number {
 }
 
 /**
+ * Helper to create a pixel dimension value
+ */
+function toPx(value: number): DTCGDimensionValue {
+  return { value, unit: 'px' };
+}
+
+/**
+ * Navigate to nested group in tree, creating groups as needed
+ * Returns the parent group where the token should be placed
+ */
+function getOrCreateGroup(tree: DTCGTokenTree, pathParts: string[]): DTCGTokenTree {
+  let current = tree;
+  for (const part of pathParts) {
+    if (!current[part] || typeof current[part] !== 'object' || '$value' in (current[part] as object)) {
+      current[part] = {};
+    }
+    current = current[part] as DTCGTokenTree;
+  }
+  return current;
+}
+
+/**
  * Convert float to dimension or number
+ * Note: Figma always provides values in pixels, so we default to 'px'
  */
 function convertFloat(
   value: number,
-  variable: ExtractedVariable,
-  defaultUnit: 'px' | 'rem'
+  variable: ExtractedVariable
 ): DTCGDimensionValue | number {
   // Check if it should be a plain number (opacity, etc.)
   const isPlainNumber =
@@ -490,8 +499,7 @@ function convertFloat(
     return value;
   }
 
-  // Otherwise it's a dimension
-  return { value, unit: defaultUnit };
+  return toPx(value);
 }
 
 /**
@@ -588,36 +596,17 @@ export function convertTextStylesToDTCG(
   const tree: DTCGTokenTree = {};
 
   for (const style of textStyles) {
-    // Split path: "Heading/Large" → ["Heading", "Large"]
     const pathParts = style.name.split('/');
     const tokenName = pathParts.pop()!;
+    const group = getOrCreateGroup(tree, pathParts);
 
-    // Navigate/create nested groups
-    let current: DTCGTokenTree = tree;
-    for (const part of pathParts) {
-      if (!current[part] || typeof current[part] !== 'object' || '$value' in (current[part] as object)) {
-        current[part] = {};
-      }
-      current = current[part] as DTCGTokenTree;
-    }
-
-    // Build typography value with references or raw values
     const typographyValue: Record<string, unknown> = {
       fontFamily: convertBoundValue(style.fontFamily, (v) => v),
-      fontSize: convertBoundValue(style.fontSize, (v) => ({ value: v, unit: config.defaultUnit })),
+      fontSize: convertBoundValue(style.fontSize, toPx),
       fontWeight: convertBoundValue(style.fontWeight, (v) => v),
-      lineHeight: convertBoundValue(style.lineHeight, (v) =>
-        v === 'AUTO' ? 'auto' : (typeof v === 'number' ? v : v)
-      ),
+      lineHeight: convertBoundValue(style.lineHeight, (v) => v === 'AUTO' ? 'auto' : v),
+      letterSpacing: convertBoundValue(style.letterSpacing, toPx),
     };
-
-    // Add letterSpacing if present
-    const letterSpacingValue = convertBoundValue(style.letterSpacing, (v) =>
-      v !== 0 ? { value: v, unit: config.defaultUnit } : { value: 0, unit: config.defaultUnit }
-    );
-    if (letterSpacingValue !== undefined) {
-      typographyValue.letterSpacing = letterSpacingValue;
-    }
 
     // Create the token
     const token: DTCGToken = {
@@ -630,7 +619,7 @@ export function convertTextStylesToDTCG(
       token.$description = style.description;
     }
 
-    current[tokenName] = token;
+    group[tokenName] = token;
   }
 
   return tree;
@@ -646,26 +635,17 @@ export function convertEffectStylesToDTCG(
   const tree: DTCGTokenTree = {};
 
   for (const style of effectStyles) {
-    // Split path: "Shadow/Large" → ["Shadow", "Large"]
     const pathParts = style.name.split('/');
     const tokenName = pathParts.pop()!;
-
-    // Navigate/create nested groups
-    let current: DTCGTokenTree = tree;
-    for (const part of pathParts) {
-      if (!current[part] || typeof current[part] !== 'object' || '$value' in (current[part] as object)) {
-        current[part] = {};
-      }
-      current = current[part] as DTCGTokenTree;
-    }
+    const group = getOrCreateGroup(tree, pathParts);
 
     // Convert each shadow effect
     const shadowValues: DTCGShadowValue[] = style.effects.map((effect) => {
       const shadow: Record<string, unknown> = {
-        offsetX: convertBoundValue(effect.offsetX, (v) => ({ value: v, unit: config.defaultUnit })),
-        offsetY: convertBoundValue(effect.offsetY, (v) => ({ value: v, unit: config.defaultUnit })),
-        blur: convertBoundValue(effect.blur, (v) => ({ value: v, unit: config.defaultUnit })),
-        spread: convertBoundValue(effect.spread, (v) => ({ value: v, unit: config.defaultUnit })),
+        offsetX: convertBoundValue(effect.offsetX, toPx),
+        offsetY: convertBoundValue(effect.offsetY, toPx),
+        blur: convertBoundValue(effect.blur, toPx),
+        spread: convertBoundValue(effect.spread, toPx),
         color: convertBoundValue(effect.color, (v) => convertColor(v, config.colorFormat)),
       };
 
@@ -688,7 +668,7 @@ export function convertEffectStylesToDTCG(
       token.$description = style.description;
     }
 
-    current[tokenName] = token;
+    group[tokenName] = token;
   }
 
   return tree;

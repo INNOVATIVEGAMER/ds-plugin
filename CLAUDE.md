@@ -163,7 +163,6 @@ interface ExportConfig {
   collections: string[];           // Collection IDs to export
   modes: Record<string, string[]>; // Collection ID → Mode IDs
   includeDescriptions: boolean;    // Add $description fields
-  defaultUnit: "px" | "rem";       // Dimension units
   colorFormat: "hex" | "oklch";    // Color output format
   resolveReferences: boolean;      // Flatten aliases to direct values
   // Style export options
@@ -173,6 +172,16 @@ interface ExportConfig {
   selectedEffectStyles: string[];  // Effect style IDs to export
 }
 ```
+
+Note: Dimension values are always output in `px` since Figma provides all values in pixels.
+
+## Coding Style
+
+- **Prefer declarative code**: Use small, focused helper functions over inline imperative logic
+- **Avoid duplication**: Extract repeated patterns into reusable helpers
+- **Keep functions pure**: Helpers should transform data without side effects
+- **Use descriptive names**: Function names should describe what they return, not how they work
+- **Don't over-engineer**: Only extract helpers when there's meaningful duplication (3+ uses). Simple one-liner patterns used sparingly don't need abstraction
 
 ## Development Notes
 

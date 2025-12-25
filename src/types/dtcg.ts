@@ -110,8 +110,8 @@ export interface TextStyleInfo {
   id: string;
   name: string;
   fontFamily: string;
-  fontWeight: number;
-  fontSize: number;
+  fontWeight: string;  // Value or variable reference like "{weight/semibold}"
+  fontSize: string;    // Value or variable reference like "{size/base}"
 }
 
 export interface EffectStyleInfo {

@@ -64,8 +64,8 @@ figma.ui.onmessage = async (msg: MessageFromUI) => {
           id: s.id,
           name: s.name,
           fontFamily: s.fontFamily.type === 'value' ? s.fontFamily.value : `{${s.fontFamily.variableName}}`,
-          fontWeight: s.fontWeight.type === 'value' ? s.fontWeight.value : 400,
-          fontSize: s.fontSize.type === 'value' ? s.fontSize.value : 16,
+          fontWeight: s.fontWeight.type === 'value' ? String(s.fontWeight.value) : `{${s.fontWeight.variableName}}`,
+          fontSize: s.fontSize.type === 'value' ? String(s.fontSize.value) : `{${s.fontSize.variableName}}`,
         }));
 
         const effectStylesInfo: EffectStyleInfo[] = effectStyles.map(s => ({

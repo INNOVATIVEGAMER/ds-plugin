@@ -12,8 +12,8 @@ interface TextStyleInfo {
   id: string;
   name: string;
   fontFamily: string;
-  fontWeight: number;
-  fontSize: number;
+  fontWeight: string;  // Value or variable reference like "{weight/semibold}"
+  fontSize: string;    // Value or variable reference like "{size/base}"
 }
 
 interface EffectStyleInfo {
@@ -310,7 +310,7 @@ export default function App() {
                 />
                 <span className="style-name">{s.name}</span>
                 <span className="style-meta">
-                  {s.fontFamily} · {s.fontWeight} · {s.fontSize}px
+                  {s.fontFamily} · {s.fontWeight} · {s.fontSize.startsWith('{') ? s.fontSize : `${s.fontSize}px`}
                 </span>
               </label>
             ))}

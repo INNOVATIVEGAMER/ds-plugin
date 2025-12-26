@@ -14,6 +14,11 @@ import type {
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('preview');
 
+  // Loading state for initial data fetch
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [collectionsLoaded, setCollectionsLoaded] = useState(false);
+  const [stylesLoaded, setStylesLoaded] = useState(false);
+
   // Collections state
   const [collections, setCollections] = useState<CollectionInfo[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
@@ -38,6 +43,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if initial loading is complete
+  useEffect(() => {
+    if (collectionsLoaded && stylesLoaded) {
+      setIsInitialLoading(false);
+    }
+  }, [collectionsLoaded, stylesLoaded]);
+
   useEffect(() => {
     parent.postMessage({ pluginMessage: { type: 'GET_COLLECTIONS' } }, '*');
     parent.postMessage({ pluginMessage: { type: 'GET_STYLES' } }, '*');
@@ -55,6 +67,7 @@ export default function App() {
             allModes[c.id] = c.modes.map((m) => m.modeId);
           });
           setSelectedModes(allModes);
+          setCollectionsLoaded(true);
           break;
 
         case 'STYLES_DATA':
@@ -62,6 +75,7 @@ export default function App() {
           setEffectStyles(msg.payload.effectStyles);
           setSelectedTextStyles(msg.payload.textStyles.map((s: TextStyleInfo) => s.id));
           setSelectedEffectStyles(msg.payload.effectStyles.map((s: EffectStyleInfo) => s.id));
+          setStylesLoaded(true);
           break;
 
         case 'EXPORT_RESULT':
@@ -168,6 +182,49 @@ export default function App() {
     selectedCollections.length > 0 ||
     selectedTextStyles.length > 0 ||
     selectedEffectStyles.length > 0;
+
+  // Check if file has any exportable content
+  const hasNoContent = collections.length === 0 && textStyles.length === 0 && effectStyles.length === 0;
+
+  // Show loading state while fetching initial data
+  if (isInitialLoading) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>DTCG Token Exporter</h1>
+          <p className="app-subtitle">Export Figma Variables to W3C DTCG format</p>
+        </header>
+        <div className="app-loading">
+          <div className="loading-spinner" />
+          <p>Loading variables and styles...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state when file has no variables or styles
+  if (hasNoContent) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>DTCG Token Exporter</h1>
+          <p className="app-subtitle">Export Figma Variables to W3C DTCG format</p>
+        </header>
+        <div className="app-empty">
+          <div className="app-empty-icon">{ }</div>
+          <h2>No Variables or Styles Found</h2>
+          <p>This file doesn't contain any Figma Variables or Styles to export.</p>
+          <div className="app-empty-hint">
+            <strong>To get started:</strong>
+            <ul>
+              <li>Create Variables in the Variables panel (right sidebar)</li>
+              <li>Create Text Styles or Effect Styles in the Design panel</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

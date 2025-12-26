@@ -239,7 +239,7 @@ export async function extractEffectStyles(): Promise<ExtractedEffectStyle[]> {
         color: await extractBoundValue(boundVars, 'color', shadowEffect.color as RGBA),
         offsetX: await extractBoundValue(boundVars, 'offsetX', shadowEffect.offset.x),
         offsetY: await extractBoundValue(boundVars, 'offsetY', shadowEffect.offset.y),
-        blur: await extractBoundValue(boundVars, 'blur', shadowEffect.radius),
+        blur: await extractBoundValue(boundVars, 'radius', shadowEffect.radius),
         spread: await extractBoundValue(boundVars, 'spread', shadowEffect.spread ?? 0),
       });
     }

@@ -23,6 +23,7 @@ import type {
   ExtractedEffectStyle,
   BoundValue,
 } from './extract';
+import { getFontSource } from './fontSources';
 
 /**
  * Build variable map for alias resolution (ID → Variable)
@@ -249,6 +250,13 @@ function createToken(
   // Add description if enabled
   if (config.includeDescriptions && variable.description) {
     token.$description = variable.description;
+  }
+
+  // Add font source extension for fontFamily tokens
+  if (type === 'fontFamily' && typeof token.$value === 'string') {
+    token.$extensions = {
+      'nx-font-source': getFontSource(token.$value),
+    };
   }
 
   return token;

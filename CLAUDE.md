@@ -43,6 +43,7 @@ This plugin uses Figma's dual-context architecture:
 | `src/code.ts`             | Figma sandbox code - message handler, API orchestration      |
 | `src/lib/extract.ts`      | Variable & style extraction from Figma API                   |
 | `src/lib/convert.ts`      | DTCG conversion logic, color math, typography & shadow       |
+| `src/lib/fontSources.ts`  | Font source mapping for Google/system fonts ($extensions)    |
 | `src/lib/stylesPreview.ts`| Styles preview data extraction with mode-aware resolution    |
 | `src/types/dtcg.ts`       | TypeScript types for DTCG format                             |
 | `src/ui/App.tsx`          | Main React UI with tab navigation (Preview/Export)           |
@@ -83,6 +84,7 @@ src/
 ├── lib/
 │   ├── extract.ts             # extractAllCollections(), extractTextStyles(), extractEffectStyles()
 │   ├── convert.ts             # convertToDTCG(), convertTextStylesToDTCG(), convertEffectStylesToDTCG()
+│   ├── fontSources.ts         # getFontSource() - font source mapping for CSS generation
 │   └── stylesPreview.ts       # getStylesPreview() - mode-aware style preview extraction
 ├── types/
 │   └── dtcg.ts                # DTCG type definitions (tokens, typography, shadow)
@@ -203,6 +205,16 @@ Supports advanced OKLCH conversion for Tailwind v4 compatibility:
 - Handles cross-collection references
 - Circular reference detection with warnings
 - Mode fallback for missing values
+
+### Font Source Extensions
+
+Font family tokens include `$extensions.nx-font-source` metadata for downstream CSS generation:
+
+- **Google Fonts:** Includes `family`, `weights`, and `styles` for auto-generating imports
+- **System Fonts:** Marked with `type: "system"` (no import needed)
+- **Custom Fonts:** Reserved `type: "custom"` for future self-hosted fonts
+
+To add new fonts, edit `src/lib/fontSources.ts` and add entries to `FONT_SOURCE_MAP`.
 
 ## Export Configuration
 
